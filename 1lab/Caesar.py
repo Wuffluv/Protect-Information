@@ -22,7 +22,7 @@ def caesar_decrypt(text, shift, alphabet):
     """
     Функция расшифровывает строку text, сдвигая символы на shift позиций влево в указанном алфавите alphabet.
     """
-    return caesar_encrypt(text, -shift, alphabet)  # Расшифровка - это шифрование с отрицательным сдвигом
+    return caesar_encrypt(text, -shift, alphabet)
 
 # Функция для атаки полным перебором (brute force)
 def caesar_bruteforce(text, alphabet):
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     decrypted_text = caesar_decrypt(encrypted_text, shift_value, alphabet)
     print(f"Расшифрованная строка: {decrypted_text}")
 
-    # Атака полным перебором
+    # полный перебор
     all_decryptions = caesar_bruteforce(encrypted_text, alphabet)
     print("Варианты расшифровки при разных сдвигах:")
     for shift, variant in all_decryptions:
