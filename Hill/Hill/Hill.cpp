@@ -26,6 +26,16 @@ vector<int> encryptVector(const vector<int>& vec, const vector<vector<int>>& A, 
     return result;
 }
 
+// Функция для расшифровки вектора с использованием обратной матрицы A и вектора H
+vector<int> decryptVector(const vector<int>& vec, const vector<vector<int>>& invA, const vector<int>& H, int mod) {
+    vector<int> result(vec.size(), 0);
+    for (int i = 0; i < vec.size(); ++i) {
+        result[i] = (vec[i] - H[i] + mod) % mod;
+    }
+    result = multiplyMatrix(result, invA, mod);
+    return result;
+}
+
 // Функция для преобразования вектора индексов в строку
 string vectorToString(const vector<int>& vec, const map<int, char>& indexToChar) {
     string result;
@@ -79,6 +89,7 @@ int main() {
 
     // Задаем матрицу A и вектор H
     vector<vector<int>> A = { {1, 5, 3}, {1, 6, 2}, {0, 1, 0} };
+    vector<vector<int>> invA = { {6, 5, 1}, {6, 1, 5}, {1, 0, 6} }; // Обратная матрица A по модулю N
     vector<int> H(m);
     for (int i = 0; i < m; ++i) {
         H[i] = rand() % N; // Пример случайных значений для вектора H
@@ -87,13 +98,26 @@ int main() {
     // Шифруем векторы
     cout << "Зашифрованные векторы:\n";
     string encryptedText;
+    vector<vector<int>> encryptedSequences;
     for (const auto& seq : sequences) {
         vector<int> encryptedVec = encryptVector(seq, A, H, N);
+        encryptedSequences.push_back(encryptedVec);
         cout << vectorToString(encryptedVec, indexToChar) << endl;
         encryptedText += vectorToString(encryptedVec, indexToChar);
     }
 
     cout << "Зашифрованное сообщение: " << encryptedText << endl;
+
+    // Расшифровываем векторы
+    cout << "Расшифрованные векторы:\n";
+    string decryptedText;
+    for (const auto& encSeq : encryptedSequences) {
+        vector<int> decryptedVec = decryptVector(encSeq, invA, H, N);
+        cout << vectorToString(decryptedVec, indexToChar) << endl;
+        decryptedText += vectorToString(decryptedVec, indexToChar);
+    }
+
+    cout << "Расшифрованное сообщение: " << decryptedText << endl;
 
     return 0;
 }
