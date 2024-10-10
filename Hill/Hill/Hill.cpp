@@ -1,161 +1,84 @@
 ﻿#include <iostream>
-#include <string>
 #include <vector>
-#include <map>
-#include <Eigen/Dense>
+#include <string>
 
 using namespace std;
-using namespace Eigen;
 
-// Функция для генерации матрицы с определителем 1
-MatrixXd generateMatrix(int m, int N) {
-    MatrixXd matrix(m, m);
-    double det;
-
-    do {
-        for (int i = 0; i < m; ++i) {
-            for (int j = 0; j < m; ++j) {
-                matrix(i, j) = rand() % N; // случайные числа от 0 до N-1
-            }
+// Функция для умножения матриц по модулю N
+vector<int> multiplyMatrix(vector<int> X, vector<vector<int>> A, int N) {
+    int m = X.size();
+    vector<int> result(m, 0);
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < m; j++) {
+            result[i] += X[j] * A[j][i];
         }
-        det = matrix.determinant();
-    } while (det == 0 || det != 1); // продолжаем до тех пор, пока определитель не станет равным 1 и не равен 0
-
-    return matrix;
-}
-
-// Функция для нахождения обратной матрицы
-MatrixXd modularInverse(const MatrixXd& matrix, int N) {
-    MatrixXd inverse = matrix.inverse(); // Находим обратную матрицу
-    MatrixXd modInverse = inverse.unaryExpr([N](double val) { return static_cast<int>(fmod(val + N, N)); }); // Применяем модуль
-
-    return modInverse;
-}
-
-// Функция для проверки, является ли результат произведения равным единичной матрице
-MatrixXd checkIdentity(const MatrixXd& A, const MatrixXd& A_inv, int N) {
-    MatrixXd product = A * A_inv; // Перемножаем матрицы
-    return product.unaryExpr([N](double val) { return static_cast<int>(fmod(val + N, N)); }); // Применяем модуль
-}
-
-// Функция для шифрования векторов
-VectorXd encryptVector(const VectorXd& X, const MatrixXd& A, const VectorXd& H, int N) {
-    VectorXd Y = (A * X + H).unaryExpr([N](double val) { return static_cast<int>(fmod(val + N, N)); }); // Шифрование
-    return Y;
-}
-
-// Функция для расшифровки векторов
-VectorXd decryptVector(const VectorXd& Y, const MatrixXd& A_inv, const VectorXd& H, int N) {
-    VectorXd adjustedY = (Y - H).unaryExpr([N](double val) { return (static_cast<int>(val) % N + N) % N; }); // Коррекция Y
-    VectorXd X = (A_inv * adjustedY).unaryExpr([N](double val) { return (static_cast<int>(val) % N + N) % N; }); // Расшифровка
-    return X;
-}
-
-// Функция для преобразования вектора чисел в строку символов
-string vectorToString(const VectorXd& vec, const map<int, char>& indexToChar) {
-    string result;
-    for (int i = 0; i < vec.size(); ++i) {
-        int index = static_cast<int>(vec(i));
-        // Проверяем, существует ли индекс в мапе
-        auto it = indexToChar.find(index);
-        if (it != indexToChar.end()) {
-            result += it->second; // Добавляем символ в результат
-        }
-        else {
-            result += '?'; // Добавляем символ для неизвестного индекса
-        }
+        result[i] = (result[i] % N + N) % N;
     }
     return result;
 }
 
+// Функция для шифрования текста с использованием шифра Хилла
+string hillEncrypt(string text, vector<vector<int>> A, vector<int> H, string alphabet) {
+    int N = alphabet.size();
+    int m = A.size();
+    while (text.size() % m != 0) {
+        text += alphabet.back(); // Добавить последний символ алфавита, чтобы дополнить текст
+    }
+
+    string encrypted;
+    for (int i = 0; i < text.size(); i += m) {
+        vector<int> X(m);
+        for (int j = 0; j < m; j++) {
+            X[j] = alphabet.find(text[i + j]);
+        }
+        vector<int> Y = multiplyMatrix(X, A, N);
+        for (int j = 0; j < m; j++) {
+            Y[j] = (Y[j] + H[j]) % N;
+            encrypted += alphabet[Y[j]];
+        }
+    }
+    return encrypted;
+}
+
+// Функция для расшифровки текста с использованием шифра Хилла
+string hillDecrypt(string encryptedText, vector<vector<int>> A_inv, vector<int> H, string alphabet) {
+    int N = alphabet.size();
+    int m = A_inv.size();
+
+    string decrypted;
+    for (int i = 0; i < encryptedText.size(); i += m) {
+        vector<int> Y(m);
+        for (int j = 0; j < m; j++) {
+            Y[j] = alphabet.find(encryptedText[i + j]);
+            Y[j] = (Y[j] - H[j] + N) % N;
+        }
+        vector<int> X = multiplyMatrix(Y, A_inv, N);
+        for (int j = 0; j < m; j++) {
+            decrypted += alphabet[X[j]];
+        }
+    }
+    return decrypted;
+}
+
 int main() {
-    srand(static_cast<unsigned>(time(0))); // Инициализация генератора случайных чисел
+    setlocale(LC_ALL, "RUS");
+    // Определение алфавита, матрицы A и вектора H
+    string alphabet = "АОУЫНТ_";
+    vector<vector<int>> A = { {1, 5, 3}, {1, 6, 2}, {0, 1, 0} }; // Пример матрицы для шифрования
+    vector<vector<int>> A_inv = { {5, 3, 6}, {0, 0, 1}, {1, 6, 1} }; // Пример обратной матрицы
+    vector<int> H = { 1, 2, 3 }; // Пример вектора H
 
-    setlocale(LC_ALL, "Rus");
-    string Alphabet = "АОУЫНТ_";
-    cout << "Алфавит: " << Alphabet << endl;
+    // Исходный текст
+    string text = "У_АННЫ_НОТЫ";
+    cout << "Исходный текст: " << text << endl;
 
-    string Text = "У_АННЫ_НОТЫ";
-    cout << "Шифруемое сообщение: " << Text << endl;
-    int N = Alphabet.size();
-    int m = 3;
-
-    map<char, int> charToIndex;
-    map<int, char> indexToChar; // Обратная мапа для преобразования индексов в символы
-    for (int i = 0; i < N; ++i) {
-        charToIndex[Alphabet[i]] = i;
-        indexToChar[i] = Alphabet[i]; // Заполняем обратную мапу
-    }
-
-    // Разбиваем текст на последовательности длины m
-    vector<vector<int>> sequences;
-    for (size_t i = 0; i < Text.length(); i += m) {
-        vector<int> sequence;
-        for (int j = 0; j < m; ++j) {
-            if (i + j < Text.length()) {
-                sequence.push_back(charToIndex[Text[i + j]]);
-            }
-        }
-        sequences.push_back(sequence);
-    }
-
-    // Выводим полученные векторы
-    cout << "Исходные векторы:\n";
-    for (const auto& seq : sequences) {
-        for (int value : seq) {
-            cout << value << " ";
-        }
-        cout << " -> ";
-
-        VectorXd vec(seq.size());
-        for (size_t k = 0; k < seq.size(); ++k) {
-            vec(k) = seq[k];
-        }
-
-        cout << vectorToString(vec, indexToChar) << endl; // Выводим символы
-    }
-
-    MatrixXd matrix = generateMatrix(m, N);
-    cout << "Случайная матрица A с определителем 1:\n" << matrix << endl;
-
-    MatrixXd modInverseMatrix = modularInverse(matrix, N);
-    cout << "Обратная матрица A^-1 (по модулю " << N << "):\n" << modInverseMatrix << endl;
-
-    MatrixXd identityCheck = checkIdentity(matrix, modInverseMatrix, N);
-    cout << "Результат перемножения A и A^-1 (по модулю " << N << "):\n" << identityCheck << endl;
-
-    // Определяем вектор H
-    VectorXd H(m);
-    for (int i = 0; i < m; ++i) {
-        H(i) = rand() % N; // Пример случайных значений
-    }
-
-    // Шифруем векторы
-    cout << "Зашифрованные векторы:\n";
-    string encryptedText; // Для хранения зашифрованного текста
-    vector<VectorXd> encryptedVectors;
-    for (const auto& seq : sequences) {
-        VectorXd X = VectorXd::Zero(m); // Создаем нулевой вектор
-        for (int j = 0; j < seq.size(); ++j) {
-            X(j) = seq[j]; // Заполняем вектор X
-        }
-        VectorXd Y = encryptVector(X, matrix, H, N);
-        encryptedVectors.push_back(Y); // Сохраняем зашифрованный вектор
-        cout << Y.transpose() << " -> " << vectorToString(Y, indexToChar) << endl; // Выводим символы
-        encryptedText += vectorToString(Y, indexToChar);
-    }
-    cout << "Зашифрованное сообщение: " << encryptedText << endl;
+    // Шифрование текста
+    string encryptedText = hillEncrypt(text, A, H, alphabet);
+    cout << "Зашифрованный текст: " << encryptedText << endl;
 
     // Расшифровка текста
-    cout << "Расшифрованные векторы:\n";
-    string decryptedText; // Для хранения расшифрованного текста
-    for (const auto& Y : encryptedVectors) {
-        VectorXd X = decryptVector(Y, modInverseMatrix, H, N);
-        cout << X.transpose() << " -> " << vectorToString(X, indexToChar) << endl; // Выводим символы
-        decryptedText += vectorToString(X, indexToChar);
-    }
-
-    cout << "Расшифрованное сообщение: " << decryptedText << endl;
+    string decryptedText = hillDecrypt(encryptedText, A_inv, H, alphabet);
+    cout << "Расшифрованный текст: " << decryptedText << endl;
 
     return 0;
 }
