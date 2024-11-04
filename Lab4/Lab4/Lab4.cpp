@@ -2,6 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <random>
+#include <string>
 
 using namespace std;
 
@@ -73,8 +74,11 @@ int main() {
     vector<int> gen = initializeGenerator(key);
     printVector("Инициализированный генератор случайных чисел", gen);
 
-    // Пример сообщения для шифрования
-    string message = "Hello, world!";
+    // Ввод сообщения пользователем
+    cout << "Введите сообщение для шифрования: ";
+    string message;
+    getline(cin, message);
+
     vector<int> messageBytes(message.begin(), message.end());
 
     // Генерация гаммы
